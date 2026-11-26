@@ -11,9 +11,9 @@ Scope is **frozen at the end of Week 1** — new ideas go to the "Later" list at
 
 Found while checking this machine:
 
-- [ ] **Git root is wrong.** `D:\xampp\htdocs` itself is a git repo (branch `mostafaBranch`, no commits), so every project in htdocs shows as untracked. Run `git init` *inside* `SaaS-Amanah` so it gets its own repo (and consider removing the stray `htdocs\.git` if it was created by accident).
+- [x] **Git root fixed.** `D:\xampp\htdocs\.git` was an empty stray repo; renamed to `.git.stray-backup` (delete it once you are happy). SaaS-Amanah has its own repo with the GitHub remote.
 - [ ] **Docker is not installed** → Sail won't run. Install Docker Desktop (WSL2 backend). Fallback: run on XAMPP + local Redis/Mailpit, but the SRS assumes Sail.
-- [ ] **PHP is 8.2.12**; SRS targets 8.3. Sail containers give you 8.3 regardless; local CLI is only used for `composer create-project`.
+- [x] **PHP is 8.2.12** locally; Sail is set to PHP 8.3 and CI runs 8.3.
 - [ ] **`gh` CLI not installed** — install it or create the GitHub repo in the browser.
 - [ ] Create Stripe account (test mode), enable **Connect** (Express accounts), install **Stripe CLI**.
 - [ ] Create Sentry project (free tier).
@@ -38,7 +38,7 @@ tests/
   Feature/Tenancy/IsolationTest.php   ← one dataset entry per tenant-scoped model
 ```
 
-Stack: Laravel 11, Livewire 3 + Alpine, MySQL 8, Redis, Horizon, Cashier (Stripe), spatie/laravel-permission (teams = tenant_id), spatie/laravel-translatable, Pest, PHPStan (Larastan) level 6, Pint, Sentry.
+Stack: Laravel 12 (11 is EOL with unpatched CVEs; 12 still runs on PHP 8.2), Livewire 3 + Alpine, MySQL 8, Redis, Horizon, Cashier (Stripe), spatie/laravel-permission (teams = tenant_id), spatie/laravel-translatable, Pest, PHPStan (Larastan) level 6, Pint, Sentry.
 Tenancy: **hand-written** (no stancl/tenancy) — stronger interview story.
 Money: always integer minor units (halalas/cents).
 
@@ -47,14 +47,14 @@ Money: always integer minor units (halalas/cents).
 ## Week 1 — Foundation & tenant isolation
 
 **Deliverables**
-- [ ] `composer create-project laravel/laravel:^11 .` → `php artisan sail:install --with=mysql,redis,mailpit`
-- [ ] Push to GitHub; add `.github/workflows/ci.yml`: Pint (`--test`), PHPStan L6, Pest `--coverage --min=80` on every PR
+- [x] Laravel 12 + Sail (PHP 8.3, MySQL, Redis, Mailpit)
+- [ ] Push to GitHub — [x] `.github/workflows/ci.yml`: Pint (`--test`), PHPStan L6, Pest `--coverage --min=80` on every PR
 - [ ] Branch protection on `main` (CI must pass)
-- [ ] Migration `tenants` (name, subdomain unique, stripe_customer_id, stripe_account_id, plan, status, trial_ends_at, settings json)
-- [ ] **Write `IsolationTest` first** (red), then:
-- [ ] `TenantResolver` middleware: subdomain → `Tenant` → bind `app('tenant')`; 404 on unknown; central domain routes separate
-- [ ] `BelongsToTenant` trait: global scope `where tenant_id = current`, `creating` hook fills `tenant_id`, throws if no tenant bound
-- [ ] `TenantAware` job trait/middleware: serializes `tenant_id`, re-binds tenant before `handle()`
+- [x] Migration `tenants` (name, subdomain unique, stripe_customer_id, stripe_account_id, plan, status, trial_ends_at, settings json)
+- [x] **`IsolationTest`** (+ guard test that every `tenant_id` model uses the trait)
+- [x] `ResolveTenant` middleware: subdomain → `Tenant` → bind `app('tenant')`; 404 on unknown; central domain routes separate
+- [x] `BelongsToTenant` trait: global scope `where tenant_id = current`, `creating` hook fills `tenant_id`, throws if no tenant bound
+- [x] `QueueTenancy`: every job payload carries `tenant_id`, re-bound before `handle()` (no per-job trait needed)
 - [ ] Local subdomains: `*.amanah.test` (hosts entries or `lvh.me`)
 
 **Acceptance:** Tenant A cannot read/update/count any record of Tenant B (model, query, job); CI green.
